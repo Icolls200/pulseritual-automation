@@ -1,4 +1,4 @@
-name: PulseRitual Daily Video
+name: PulseRituals Daily Video
 on:
   schedule:
     - cron: '0 5 * * *'  # 5 AM UTC daily
@@ -12,12 +12,31 @@ jobs:
         id: date
         run: |
           echo "today=$(date +'%B %d')" >> $GITHUB_OUTPUT
-          echo "video_url=https://github.com/yourname/pulseritual-automation/raw/main/test-video.mp4" >> $GITHUB_OUTPUT
+          echo "video_url=https://raw.githubusercontent.com/Icolls200/pulseritual-automation/main/test-video.mp4" >> $GITHUB_OUTPUT
+          echo "social_proof=$(shuf -i 1000-2000 -n 1)" >> $GITHUB_OUTPUT
+          echo "scarcity=$(shuf -i 50-150 -n 1)" >> $GITHUB_OUTPUT
       
       - name: Post to Facebook
+        id: post
         run: |
-          curl -X POST "https://graph.facebook.com/v20.0/pulseritual/videos" \
+          response=$(curl -s -X POST "https://graph.facebook.com/v20.0/pulserituals/videos" \
             -F "file_url=${{ steps.date.outputs.video_url }}" \
-            -F "description=Your PulseRitual for ${{ steps.date.outputs.today }} ❤️ @pulseritual" \
+            -F "description=Your PulseRituals for ${{ steps.date.outputs.today }} ❤️ @pulserituals" \
             -F "container_type=REEL" \
+            -F "access_token=${{ secrets.FB_TOKEN }}")
+          echo "post_id=$(echo $response | grep -oP '"id":"\K[^"]+')" >> $GITHUB_OUTPUT
+      
+      - name: Wait for initial engagement
+        run: sleep 900  # 15 minutes (algorithm "organic virality" signal)
+      
+      - name: Post hashtags comment
+        run: |
+          curl -X POST "https://graph.facebook.com/v20.0/${{ steps.post.outputs.post_id }}/comments" \
+            -F "message=#PulseRituals #BioHacking #MorningRitual #EnergyRitual #FocusFlow #RitualScience #CortisolReset #BiologicalRhythm #NeuroscienceRitual #RitualUpgrade" \
+            -F "access_token=${{ secrets.FB_TOKEN }}"
+      
+      - name: Post engagement comment
+        run: |
+          curl -X POST "https://graph.facebook.com/v20.0/${{ steps.post.outputs.post_id }}/comments" \
+            -F "message=FIRST ${{ steps.date.outputs.scarcity }} TAP BIO FOR:\n1) YOUR PERSONAL RITUAL BLUEPRINT\n2) THE 'FOCUS FLOW' RITUAL (USED IN THIS VIDEO)\n3) JOIN ${{ steps.date.outputs.social_proof }} RITUAL UPGRADERS\n\n👉 SCAN QR CODE IN BIO TO CLAIM!" \
             -F "access_token=${{ secrets.FB_TOKEN }}"

@@ -1,0 +1,23 @@
+name: PulseRitual Daily Video
+on:
+  schedule:
+    - cron: '0 5 * * *'  # 5 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set date variables
+        id: date
+        run: |
+          echo "today=$(date +'%B %d')" >> $GITHUB_OUTPUT
+          echo "video_url=https://github.com/yourname/pulseritual-automation/raw/main/test-video.mp4" >> $GITHUB_OUTPUT
+      
+      - name: Post to Facebook
+        run: |
+          curl -X POST "https://graph.facebook.com/v20.0/pulseritual/videos" \
+            -F "file_url=${{ steps.date.outputs.video_url }}" \
+            -F "description=Your PulseRitual for ${{ steps.date.outputs.today }} ❤️ @pulseritual" \
+            -F "container_type=REEL" \
+            -F "access_token=${{ secrets.FB_TOKEN }}"

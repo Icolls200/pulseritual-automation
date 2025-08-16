@@ -17,26 +17,40 @@ jobs:
           echo "scarcity=$(shuf -i 50-150 -n 1)" >> $GITHUB_OUTPUT
       
       - name: Post to Facebook
-        id: post
+        id: fb_post
         run: |
           response=$(curl -s -X POST "https://graph.facebook.com/v20.0/pulserituals/videos" \
             -F "file_url=${{ steps.date.outputs.video_url }}" \
-            -F "description=Your PulseRituals for ${{ steps.date.outputs.today }} ❤️ @pulserituals" \
+            -F "description=Your PulseRituals for ${{ steps.date.outputs.today }} ❤️ @pulserituals\n\nStudies suggest ritual consistency supports biological rhythm patterns (studies suggest)" \
             -F "container_type=REEL" \
             -F "access_token=${{ secrets.FB_TOKEN }}")
           echo "post_id=$(echo $response | grep -oP '"id":"\K[^"]+')" >> $GITHUB_OUTPUT
       
+      - name: Cross-post to Instagram
+        id: ig_post
+        run: |
+          # Create Instagram media container
+          container=$(curl -s "https://graph.facebook.com/v20.0/me/media" \
+            -F "video_url=${{ steps.date.outputs.video_url }}" \
+            -F "media_type=VIDEO" \
+            -F "access_token=${{ secrets.FB_TOKEN }}")
+          
+          # Publish to Instagram
+          curl -X POST "https://graph.facebook.com/v20.0/me/media_publish" \
+            -F "creation_id=$(echo $container | grep -oP '"id":"\K[^"]+')" \
+            -F "access_token=${{ secrets.FB_TOKEN }}"
+      
       - name: Wait for initial engagement
         run: sleep 900  # 15 minutes (algorithm "organic virality" signal)
       
-      - name: Post hashtags comment
+      - name: Post hashtags comment (Facebook)
         run: |
-          curl -X POST "https://graph.facebook.com/v20.0/${{ steps.post.outputs.post_id }}/comments" \
+          curl -X POST "https://graph.facebook.com/v20.0/${{ steps.fb_post.outputs.post_id }}/comments" \
             -F "message=#PulseRituals #BioHacking #MorningRitual #EnergyRitual #FocusFlow #RitualScience #CortisolReset #BiologicalRhythm #NeuroscienceRitual #RitualUpgrade" \
             -F "access_token=${{ secrets.FB_TOKEN }}"
       
-      - name: Post engagement comment
+      - name: Post engagement comment (Facebook)
         run: |
-          curl -X POST "https://graph.facebook.com/v20.0/${{ steps.post.outputs.post_id }}/comments" \
-            -F "message=FIRST ${{ steps.date.outputs.scarcity }} TAP BIO FOR:\n1) YOUR PERSONAL RITUAL BLUEPRINT\n2) THE 'FOCUS FLOW' RITUAL (USED IN THIS VIDEO)\n3) JOIN ${{ steps.date.outputs.social_proof }} RITUAL UPGRADERS\n\n👉 SCAN QR CODE IN BIO TO CLAIM!" \
+          curl -X POST "https://graph.facebook.com/v20.0/${{ steps.fb_post.outputs.post_id }}/comments" \
+            -F "message=FIRST ${{ steps.date.outputs.scarcity }} TAP BIO FOR:\n1) YOUR PERSONAL RITUAL BLUEPRINT\n2) THE 'FOCUS FLOW' RITUAL (USED IN THIS VIDEO)\n3) JOIN ${{ steps.date.outputs.social_proof }} RITUAL UPGRADERS\n\n👉 SCAN QR CODE AT https://pulserituals.bio" \
             -F "access_token=${{ secrets.FB_TOKEN }}"
